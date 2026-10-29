@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "tinkers_crossbow:receiver_body_cast",
+    "tinkers_crossbow:receiver_magazine_cast"
+  ]
+}

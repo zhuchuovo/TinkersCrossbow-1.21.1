@@ -1,0 +1,16 @@
+{
+  "type": "tconstruct:part_builder",
+  "cost": 8,
+  "pattern": "tinkers_crossbow:receiver_body",
+  "pattern_item": [
+    {
+      "tag": "tconstruct:patterns/default"
+    },
+    {
+      "item": "tinkers_crossbow:receiver_body_cast"
+    }
+  ],
+  "result": {
+    "item": "tinkers_crossbow:receiver_body"
+  }
+}

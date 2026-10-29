@@ -1,0 +1,33 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="MIT"
+[[mods]]
+modId="tinkers_crossbow"
+version="${version}"
+displayName="Tinkers' Crossbow"
+authors="mcmod"
+description="Material-based repeating crossbows, receivers and persistent magazines for Tinkers' Construct."
+[[dependencies.tinkers_crossbow]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.0,21.2.0)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.tinkers_crossbow]]
+modId="minecraft"
+type="required"
+versionRange="[1.21.1,1.21.2)"
+ordering="NONE"
+side="BOTH"
+[[dependencies.tinkers_crossbow]]
+modId="tconstruct"
+type="required"
+versionRange="[3.13.3,)"
+ordering="AFTER"
+side="BOTH"
+[[dependencies.tinkers_crossbow]]
+modId="mantle"
+type="required"
+versionRange="[1.13.0,)"
+ordering="AFTER"
+side="BOTH"

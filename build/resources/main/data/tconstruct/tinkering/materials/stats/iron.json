@@ -1,0 +1,16 @@
+{
+  "stats": {
+    "tinkers_crossbow:receiver_body": {
+      "durability": 180,
+      "damage": 6.0,
+      "fire_rate": 1.0
+    },
+    "tinkers_crossbow:receiver_magazine": {
+      "durability": 120,
+      "magazine_size": 5,
+      "reload_speed": 1.1,
+      "fire_rate": 0,
+      "damage": 0
+    }
+  }
+}

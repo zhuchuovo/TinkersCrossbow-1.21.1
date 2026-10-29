@@ -1,0 +1,37 @@
+{
+  "loader": "tconstruct:tool",
+  "parent": "tconstruct:item/base/crossbow",
+  "textures": {
+    "limb": "tinkers_crossbow:item/tool/repeating_crossbow/limb",
+    "grip": "tinkers_crossbow:item/tool/repeating_crossbow/grip",
+    "bowstring": "tinkers_crossbow:item/tool/repeating_crossbow/bowstring",
+    "receiver_fixed": "tinkers_crossbow:item/tool/repeating_crossbow/receiver_fixed",
+    "body": "tinkers_crossbow:item/tool/repeating_crossbow/body",
+    "magazine": "tinkers_crossbow:item/tool/repeating_crossbow/magazine"
+  },
+  "parts": [
+    {
+      "name": "limb",
+      "index": 0
+    },
+    {
+      "name": "grip",
+      "index": 1
+    },
+    {
+      "name": "bowstring",
+      "index": 2
+    },
+    {
+      "name": "receiver_fixed"
+    },
+    {
+      "name": "body",
+      "index": 3
+    },
+    {
+      "name": "magazine",
+      "index": 4
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "perStat": {
+    "tinkers_crossbow:receiver_body": [
+      {
+        "level": 1,
+        "name": "tinkers_crossbow:stonebound"
+      }
+    ],
+    "tinkers_crossbow:receiver_magazine": [
+      {
+        "level": 1,
+        "name": "tinkers_crossbow:stonebound"
+      }
+    ]
+  }
+}

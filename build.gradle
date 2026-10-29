@@ -1,0 +1,64 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+group = 'mcmod.tinkerscrossbow'
+version = "${minecraft_version}-${mod_version}"
+base { archivesName = 'TinkersCrossbow' }
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    withSourcesJar()
+}
+repositories { mavenCentral() }
+def mcmodDir = file(findProperty('mcmod_dir') ?: '..')
+def ticJar = new File(mcmodDir, "TinkersConstruct-1.21.1/build/libs/TinkersConstruct-1.21.1-${tconstruct_version}.jar")
+def mantleJar = new File(mcmodDir, "Mantle-1.21.1/build/libs/Mantle-1.21.1-${mantle_version}.jar")
+sourceSets {
+    gameTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+neoForge {
+    version = project.neo_version
+    parchment {
+        minecraftVersion = '1.21.1'
+        mappingsVersion = '2024.11.17'
+    }
+    runs {
+        client { client() }
+        assetCheckClient {
+            client()
+            systemProperty 'tinkers_crossbow.asset_check', 'true'
+            programArguments.addAll '--width', '640', '--height', '360'
+        }
+        hudCheckClient {
+            client()
+            systemProperty 'tinkers_crossbow.hud_check', 'true'
+            programArguments.addAll '--width', '1280', '--height', '720'
+        }
+        server { server(); programArgument '--nogui' }
+        gameTestServer {
+            type = 'gameTestServer'
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'tinkers_crossbow'
+        }
+        configureEach { gameDirectory = file(name == 'gameTestServer' ? 'run-gametest' : name in ['assetCheckClient', 'hudCheckClient'] ? 'run-asset-check' : 'run') }
+    }
+    mods { tinkers_crossbow { sourceSet sourceSets.main; sourceSet sourceSets.gameTest } }
+}
+configurations {
+    localRuntime
+    runtimeClasspath.extendsFrom localRuntime
+}
+dependencies {
+    compileOnly files(ticJar, mantleJar)
+    localRuntime files(ticJar, mantleJar)
+}
+tasks.named('processResources', ProcessResources).configure {
+    inputs.property 'version', mod_version
+    filesMatching('META-INF/neoforge.mods.toml') { expand version: mod_version }
+}
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}

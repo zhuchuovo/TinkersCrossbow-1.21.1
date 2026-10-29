@@ -1,0 +1,25 @@
+{
+  "replace": false,
+  "parts": [
+    {
+      "path": "tinkers_crossbow:item/tool/repeating_crossbow/limb",
+      "stat_type": "tconstruct:limb"
+    },
+    {
+      "path": "tinkers_crossbow:item/tool/repeating_crossbow/grip",
+      "stat_type": "tconstruct:grip"
+    },
+    {
+      "path": "tinkers_crossbow:item/tool/repeating_crossbow/bowstring",
+      "stat_type": "tconstruct:bowstring"
+    },
+    {
+      "path": "tinkers_crossbow:item/tool/repeating_crossbow/body",
+      "stat_type": "tinkers_crossbow:receiver_body"
+    },
+    {
+      "path": "tinkers_crossbow:item/tool/repeating_crossbow/magazine",
+      "stat_type": "tinkers_crossbow:receiver_magazine"
+    }
+  ]
+}

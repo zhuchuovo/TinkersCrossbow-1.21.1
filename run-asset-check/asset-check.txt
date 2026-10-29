@@ -1,0 +1,9 @@
+rock: 34 quads, [tinkers_crossbow:item/tool/parts/receiver_tconstruct_rock_stone]
+flint: 34 quads, [tinkers_crossbow:item/tool/parts/receiver_tconstruct_flint]
+copper: 34 quads, [tinkers_crossbow:item/tool/parts/receiver_tconstruct_copper]
+iron: 34 quads, [tinkers_crossbow:item/tool/parts/receiver_tconstruct_iron]
+rose_gold: 34 quads, [tinkers_crossbow:item/tool/parts/receiver_tconstruct_rose_gold]
+amethyst_bronze: 34 quads, [tinkers_crossbow:item/tool/parts/receiver_tconstruct_amethyst_bronze]
+cobalt: 34 quads, [tinkers_crossbow:item/tool/parts/receiver_tconstruct_cobalt]
+unknown: 34 quads, [tinkers_crossbow:item/tool/parts/receiver_tconstruct_unknown]
+CROSSBOW_CLIENT_ASSETS_OK

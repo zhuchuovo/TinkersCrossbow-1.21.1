@@ -1,0 +1,11 @@
+{
+  "modifier.tinkers_crossbow": {
+    "pure": "#C687BD",
+    "critical_strike": "#E77C56",
+    "stonebound": "#999999",
+    "expansion": "#E6BD64",
+    "lightweight": "#2376DD",
+    "pursuit": "#E8E5D2",
+    "cruel": "#A15CF8"
+  }
+}
