@@ -1,6 +1,6 @@
 # 匠魂连弩 / Tinkers' Crossbow
 
-Minecraft 1.21.1，NeoForge 21.1，依赖当前本地移植版 Tinkers' Construct 3.13.3+ 和 Mantle 1.13.0+。
+Minecraft 1.20.1，NeoForge 47.1（`net.neoforged:forge` 1.20.1-47.1.106，沿用 `net.minecraftforge` 包名），依赖 Tinkers' Construct 3.12.1+ 和 Mantle 1.11.113+。
 
 ## 操作
 
@@ -138,27 +138,25 @@ Shift 面板显示包含拉弓速度影响的实际倍率；Ctrl 显示部件自
 重新生成贴图（Python 3，Pillow）：
 
 ```powershell
-python scripts/generate_textures.py --tconstruct ../TinkersConstruct-1.21.1
+python scripts/generate_textures.py --tconstruct ../.tconstruct-official-1.20.1
 python scripts/generate_hud_sprites.py
 ```
 
 ## 构建
 
-Java 21。默认使用相邻工程已编译的本地依赖 JAR；可在 `gradle.properties` 调整版本，或通过 `-Pmcmod_dir=...` 指定工程父目录。
+Java 17。依赖由 ForgeGradle 6 从官方 Maven 拉取并重映射（`fg.deobf`）：Tinkers' Construct 与 Mantle 的版本在 `gradle.properties` 中调整（`tconstruct_version`、`mantle_version`）。
 
 ```powershell
 .\gradlew.bat build
 ```
 
-成品位于 `build/libs/TinkersCrossbow-1.21.1-1.0.3.jar`。与匠魂、Mantle 一同放入游戏的 mods 目录。
+成品位于 `build/libs/TinkersCrossbow-1.20.1-1.0.3.jar`。与匠魂、Mantle 一同放入游戏的 mods 目录。
 
 开发客户端（`runClient`）运行时不要执行构建：Gradle 会重写 `build/classes`，正在运行的游戏会在之后首次用到的类上报 `NoClassDefFoundError`，并一直失败到重启。1.0.1 测试时“无法换弹”就是这个原因（装填类在游戏运行中被重新编译）。
 
-开发用自动游戏测试：`.\gradlew.bat runGameTestServer`。测试源码与结构位于独立的 `src/gameTest/`，不包含在成品 JAR 中。测试使用 `run-gametest/` 目录。
+开发用自动游戏测试：`.\gradlew.bat runGameTestServer`。测试源码位于独立的 `src/gameTest/java/`，不包含在成品 JAR 中。测试使用 `run-gametest/` 目录。
+
+1.20.1 的游戏测试结构从游戏目录的 `gameteststructures/<名字>.snbt` 读取，所以空模板放在 `src/gameTest/gameteststructures/empty.snbt`，由 `copyGameTestStructures` 任务在运行前复制到 `run-gametest/gameteststructures/`。
 
 游戏测试覆盖：石机匣面板及九种机体/弹舱材料、默认悬浮提示的耐久、机体与弹舱数值及百分比加成、机匣 Shift 合计属性、六种机匣特性（残忍在 80% 以上生命时触发及 2 秒后结束、乘胜三连击自动装填及清零规则、轻便射速、玫瑰金的升级槽、纯粹额外箭的数量、50% 伤害与无敌时间、致命一击按装填数累积并在发射后清零、石缚随耐久提高射速）、扩容配方与弹匣容量、匠魂箭的伤害与初速联动、无敌时间减半、真实升级槽和能力槽、机体与弹舱的部件制造台、浇铸和铸模配方（各 8 份材料）、机体加弹舱合成机匣、机匣合成连弩及替换机匣、小数发射节奏与伤害、逐支装填和药箭保存、按键发射、空弹匣右键不打断装填、切换物品中断装填、连弩停止更新后装填不会恢复且残留标记不妨碍重新装填。
-独立客户端自动验证了七种机匣及未知材质的实际烘焙模型，所有面片均使用对应机匣贴图；同时验证自定义属性翻译存在，装填模型不含箭层。
-
-独立贴图验证：`.\gradlew.bat runAssetCheckClient`，使用 `run-asset-check/` 目录，输出 `asset-check.txt` 后自动关闭该测试客户端。
-
-弹匣界面截图检查：`.\gradlew.bat runHudCheckClient`，在 `run-asset-check/` 中创建超平坦测试世界，依次截取装填中、装满、没箭（红格）的弹匣界面和全部物品图标，保存到 `run-asset-check/screenshots/hudcheck_*.png`，结果写入 `hud-check.txt` 后自动关闭。
+1.21.1 上的两个客户端自动验证任务（`runAssetCheckClient`、`runHudCheckClient`）依赖 1.21 的 GUI 图层与截图接口，尚未移植；原文件保留在 `.gameTest-1.21.1/`。它们原先验证的是七种机匣及未知材质的实际烘焙模型（所有面片均使用对应机匣贴图）、自定义属性翻译存在、装填模型不含箭层，以及装填中/装满/没箭三种弹匣界面和全部物品图标截图。

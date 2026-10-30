@@ -1,21 +1,24 @@
 package mcmod.tinkerscrossbow.logic;
 
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.bus.api.EventPriority;
-import net.neoforged.neoforge.common.NeoForge;
-import net.neoforged.neoforge.event.entity.living.LivingIncomingDamageEvent;
-import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerEvent;
-import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.entity.living.LivingAttackEvent;
+import net.minecraftforge.event.entity.living.LivingHurtEvent;
+import net.minecraftforge.event.entity.player.AttackEntityEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
+import net.minecraftforge.event.entity.player.PlayerInteractEvent;
+import net.minecraftforge.eventbus.api.EventPriority;
 import mcmod.tinkerscrossbow.item.RepeatingCrossbowItem;
 
 public final class CrossbowEvents {
     public static void register() {
-        NeoForge.EVENT_BUS.addListener(CrossbowEvents::logout);
-        NeoForge.EVENT_BUS.addListener(CrossbowEvents::attack);
-        NeoForge.EVENT_BUS.addListener(CrossbowEvents::leftClickBlock);
-        NeoForge.EVENT_BUS.addListener(EventPriority.HIGHEST, CrossbowEvents::incomingDamage);
-        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, CrossbowEvents::extraArrowCooldown);
+        MinecraftForge.EVENT_BUS.addListener(CrossbowEvents::logout);
+        MinecraftForge.EVENT_BUS.addListener(CrossbowEvents::attack);
+        MinecraftForge.EVENT_BUS.addListener(CrossbowEvents::leftClickBlock);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, CrossbowEvents::incomingAttack);
+        MinecraftForge.EVENT_BUS.addListener(EventPriority.HIGHEST, CrossbowEvents::incomingDamage);
     }
     private static void logout(PlayerEvent.PlayerLoggedOutEvent event) {
         ItemStack stack = event.getEntity().getMainHandItem();
@@ -27,24 +30,24 @@ public final class CrossbowEvents {
     private static void leftClickBlock(PlayerInteractEvent.LeftClickBlock event) {
         if (event.getEntity().getMainHandItem().getItem() instanceof RepeatingCrossbowItem) event.setCanceled(true);
     }
-    private static void incomingDamage(LivingIncomingDamageEvent event) {
-        var direct = event.getSource().getDirectEntity();
-        if (direct instanceof net.minecraft.world.entity.projectile.AbstractArrow arrow && arrow.getPersistentData().contains(RepeatingCrossbowItem.PANEL_DAMAGE)) {
-            event.setAmount(arrow.getPersistentData().getFloat(RepeatingCrossbowItem.PANEL_DAMAGE));
-            var container = event.getContainer();
-            container.setPostAttackInvulnerabilityTicks(halfInvulnerability(container.getPostAttackInvulnerabilityTicks()));
+    /**
+     * 1.20.1 checks the target's invulnerability right after this event and before the hit is applied, so clearing the
+     * timer here is what lets the extra arrows of 纯粹 land: they fly with the shot and would otherwise be swallowed by
+     * the invulnerability its other arrows just gave.
+     */
+    private static void incomingAttack(LivingAttackEvent event) {
+        if (event.getSource().getDirectEntity() instanceof AbstractArrow arrow
+            && arrow.getPersistentData().getBoolean(RepeatingCrossbowItem.EXTRA_ARROW)) {
+            event.getEntity().invulnerableTime = 0;
         }
     }
-    /**
-     * The extra arrows of 纯粹 fly with the shot, so they would hit during the invulnerability its other arrows just gave.
-     * They ignore it and leave the timer as it was. Runs last, so a cancelled hit keeps the timer.
-     */
-    private static void extraArrowCooldown(LivingIncomingDamageEvent event) {
-        if (event.getSource().getDirectEntity() instanceof net.minecraft.world.entity.projectile.AbstractArrow arrow
-            && arrow.getPersistentData().getBoolean(RepeatingCrossbowItem.EXTRA_ARROW)) {
-            var target = event.getEntity();
-            event.getContainer().setPostAttackInvulnerabilityTicks(target.invulnerableTime);
-            target.invulnerableTime = 0;
+    private static void incomingDamage(LivingHurtEvent event) {
+        var direct = event.getSource().getDirectEntity();
+        if (direct instanceof AbstractArrow arrow && arrow.getPersistentData().contains(RepeatingCrossbowItem.PANEL_DAMAGE)) {
+            event.setAmount(arrow.getPersistentData().getFloat(RepeatingCrossbowItem.PANEL_DAMAGE));
+            LivingEntity target = event.getEntity();
+            // The hit already reset the timer to 20; the crossbow leaves half of it.
+            target.invulnerableTime = halfInvulnerability(target.invulnerableTime);
         }
     }
     /**

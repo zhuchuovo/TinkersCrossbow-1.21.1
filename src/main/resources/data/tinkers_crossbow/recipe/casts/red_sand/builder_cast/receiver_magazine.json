@@ -1,8 +1,0 @@
-{
-  "type": "tconstruct:item_part_builder",
-  "pattern": "tinkers_crossbow:receiver_magazine",
-  "pattern_item": {
-    "tag": "tconstruct:casts/red_sand"
-  },
-  "result": "tinkers_crossbow:receiver_magazine_red_sand_cast"
-}

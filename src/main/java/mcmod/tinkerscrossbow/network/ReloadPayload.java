@@ -1,21 +1,25 @@
 package mcmod.tinkerscrossbow.network;
 
-import net.minecraft.network.RegistryFriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
-import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import java.util.function.Supplier;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import mcmod.tinkerscrossbow.TinkersCrossbow;
+import net.minecraftforge.network.NetworkEvent;
 import mcmod.tinkerscrossbow.item.RepeatingCrossbowItem;
 
-public record ReloadPayload() implements CustomPacketPayload {
+/** Empty request: the client pressed left click with the crossbow in hand and wants a reload to start. */
+public final class ReloadPayload {
     public static final ReloadPayload INSTANCE = new ReloadPayload();
-    public static final Type<ReloadPayload> TYPE = new Type<>(TinkersCrossbow.id("reload"));
-    public static final StreamCodec<RegistryFriendlyByteBuf, ReloadPayload> STREAM_CODEC = StreamCodec.unit(INSTANCE);
-    @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
-    public static void register(RegisterPayloadHandlersEvent event) {
-        event.registrar("1").playToServer(TYPE, STREAM_CODEC, (payload, context) -> {
-            if (context.player() instanceof ServerPlayer player) RepeatingCrossbowItem.startReload(player);
-        });
+
+    private ReloadPayload() {}
+
+    public static void encode(ReloadPayload payload, FriendlyByteBuf buffer) {}
+
+    public static ReloadPayload decode(FriendlyByteBuf buffer) { return INSTANCE; }
+
+    public static void handle(ReloadPayload payload, Supplier<NetworkEvent.Context> supplier) {
+        NetworkEvent.Context context = supplier.get();
+        ServerPlayer player = context.getSender();
+        if (player != null) context.enqueueWork(() -> RepeatingCrossbowItem.startReload(player));
+        context.setPacketHandled(true);
     }
 }

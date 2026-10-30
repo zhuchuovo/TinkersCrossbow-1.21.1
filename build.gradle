@@ -1,64 +1,90 @@
 plugins {
     id 'java-library'
-    id 'net.neoforged.moddev' version '2.0.141'
+    id 'net.minecraftforge.gradle' version '6.0.54'
 }
+
 group = 'mcmod.tinkerscrossbow'
 version = "${minecraft_version}-${mod_version}"
 base { archivesName = 'TinkersCrossbow' }
+
 java {
-    toolchain.languageVersion = JavaLanguageVersion.of(21)
+    toolchain.languageVersion = JavaLanguageVersion.of(17)
     withSourcesJar()
 }
-repositories { mavenCentral() }
-def mcmodDir = file(findProperty('mcmod_dir') ?: '..')
-def ticJar = new File(mcmodDir, "TinkersConstruct-1.21.1/build/libs/TinkersConstruct-1.21.1-${tconstruct_version}.jar")
-def mantleJar = new File(mcmodDir, "Mantle-1.21.1/build/libs/Mantle-1.21.1-${mantle_version}.jar")
+
+repositories {
+    mavenCentral()
+    maven { name = 'NeoForged'; url = 'https://maven.neoforged.net/releases' }
+    maven { name = 'SlimeKnights'; url = 'https://dvs1.progwml6.com/files/maven' }
+    maven { name = 'BlameJared'; url = 'https://maven.blamejared.com' }
+}
+
 sourceSets {
     gameTest {
         compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
         runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
     }
 }
-neoForge {
-    version = project.neo_version
-    parchment {
-        minecraftVersion = '1.21.1'
-        mappingsVersion = '2024.11.17'
-    }
+
+// NeoForge 1.20.1 uses Forge's packages, FML metadata and SRG mappings.
+minecraft {
+    mappings channel: 'official', version: minecraft_version
+    copyIdeResources = true
     runs {
-        client { client() }
-        assetCheckClient {
-            client()
-            systemProperty 'tinkers_crossbow.asset_check', 'true'
-            programArguments.addAll '--width', '640', '--height', '360'
+        configureEach {
+            workingDirectory project.file(name == 'gameTestServer' ? 'run-gametest' : 'run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'info'
+            mods { tinkers_crossbow { source sourceSets.main } }
         }
-        hudCheckClient {
-            client()
-            systemProperty 'tinkers_crossbow.hud_check', 'true'
-            programArguments.addAll '--width', '1280', '--height', '720'
+        client {
         }
-        server { server(); programArgument '--nogui' }
+        server {
+            args '--nogui'
+        }
         gameTestServer {
-            type = 'gameTestServer'
-            systemProperty 'neoforge.enabledGameTestNamespaces', 'tinkers_crossbow'
+            property 'forge.enabledGameTestNamespaces', 'tinkers_crossbow'
+            mods { tinkers_crossbow { source sourceSets.gameTest } }
         }
-        configureEach { gameDirectory = file(name == 'gameTestServer' ? 'run-gametest' : name in ['assetCheckClient', 'hudCheckClient'] ? 'run-asset-check' : 'run') }
     }
-    mods { tinkers_crossbow { sourceSet sourceSets.main; sourceSet sourceSets.gameTest } }
 }
-configurations {
-    localRuntime
-    runtimeClasspath.extendsFrom localRuntime
-}
+
 dependencies {
-    compileOnly files(ticJar, mantleJar)
-    localRuntime files(ticJar, mantleJar)
+    minecraft "net.neoforged:forge:${minecraft_version}-${neo_version}"
+    compileOnly fg.deobf("slimeknights.mantle:Mantle:${minecraft_version}-${mantle_version}")
+    compileOnly fg.deobf("slimeknights.tconstruct:TConstruct:${minecraft_version}-${tconstruct_version}")
+    runtimeOnly fg.deobf("slimeknights.mantle:Mantle:${minecraft_version}-${mantle_version}")
+    runtimeOnly fg.deobf("slimeknights.tconstruct:TConstruct:${minecraft_version}-${tconstruct_version}")
 }
+
+// 1.20.1 loads game test structures from <gameDir>/gameteststructures as SNBT, so copy them into the run directory.
+tasks.register('copyGameTestStructures', Copy) {
+    from 'src/gameTest/gameteststructures'
+    into project.file('run-gametest/gameteststructures')
+}
+
+tasks.matching { it.name == 'runGameTestServer' }.configureEach {
+    dependsOn 'copyGameTestStructures'
+}
+
 tasks.named('processResources', ProcessResources).configure {
     inputs.property 'version', mod_version
-    filesMatching('META-INF/neoforge.mods.toml') { expand version: mod_version }
+    filesMatching('META-INF/mods.toml') { expand version: mod_version }
 }
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+            'Specification-Title': "Tinkers' Crossbow",
+            'Specification-Version': '1',
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version
+        ])
+    }
+    finalizedBy 'reobfJar'
+}
+
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
-    options.release = 21
+    options.release = 17
 }

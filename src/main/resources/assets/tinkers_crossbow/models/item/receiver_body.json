@@ -1,6 +1,6 @@
 {
   "loader": "tconstruct:material",
-  "parent": "neoforge:item/default",
+  "parent": "forge:item/default",
   "textures": {
     "texture": "tinkers_crossbow:item/tool/parts/receiver_body"
   }

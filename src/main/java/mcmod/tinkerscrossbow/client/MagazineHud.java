@@ -4,17 +4,17 @@ import com.mojang.blaze3d.systems.RenderSystem;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.Util;
-import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.ListTag;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.PotionUtils;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraftforge.client.gui.overlay.ForgeGui;
+import net.minecraftforge.client.gui.overlay.IGuiOverlay;
 import slimeknights.tconstruct.library.modifiers.hook.ranged.BowAmmoModifierHook;
 import slimeknights.tconstruct.library.tools.nbt.ToolStack;
 import mcmod.tinkerscrossbow.TinkersCrossbow;
@@ -26,13 +26,14 @@ import mcmod.tinkerscrossbow.item.RepeatingCrossbowItem;
  * At most six bolts long: larger magazines squeeze their bolts together into that length. It shows when an arrow is
  * fired or loaded, while a reload runs and on a reload click, and fades out after {@link #HOLD} ms without them.
  */
-public final class MagazineHud {
-    private static final ResourceLocation BOLT = sprite("bolt");
-    private static final ResourceLocation SPECTRAL = sprite("bolt_spectral");
-    private static final ResourceLocation FLETCHING = sprite("bolt_fletching");
-    private static final ResourceLocation SLOT = sprite("slot");
-    private static final ResourceLocation UNAVAILABLE = sprite("slot_unavailable");
-    private static final ResourceLocation PROGRESS = sprite("progress");
+public final class MagazineHud implements IGuiOverlay {
+    /** 1.20.1 has no GUI sprite atlas, so the sprites are blitted straight from their texture files. */
+    private static final ResourceLocation BOLT = texture("bolt");
+    private static final ResourceLocation SPECTRAL = texture("bolt_spectral");
+    private static final ResourceLocation FLETCHING = texture("bolt_fletching");
+    private static final ResourceLocation SLOT = texture("slot");
+    private static final ResourceLocation UNAVAILABLE = texture("slot_unavailable");
+    private static final ResourceLocation PROGRESS = texture("progress");
     /** Sprites are 12x5: a 10x3 bolt inside a 1px outline. Outlines of neighbouring bolts touch. */
     private static final int WIDTH = 12, HEIGHT = 5, BOLT_LENGTH = WIDTH - 2;
     /** Six bolts: more slots than that overlap within the same length. */
@@ -49,7 +50,9 @@ public final class MagazineHud {
     private static ListTag cachedMagazine;
     private static List<ItemStack> cachedAmmo = List.of();
 
-    private static ResourceLocation sprite(String name) { return TinkersCrossbow.id("hud/magazine/" + name); }
+    private static ResourceLocation texture(String name) {
+        return new ResourceLocation(TinkersCrossbow.MOD_ID, "textures/gui/sprites/hud/magazine/" + name + ".png");
+    }
 
     /** Shows the magazine again, as a shot or a load does. */
     public static void wake() { lastActivity = Util.getMillis(); }
@@ -66,7 +69,7 @@ public final class MagazineHud {
         return elapsed <= HOLD ? 1 : Math.max(0, 1 - (elapsed - HOLD) / (float) FADE);
     }
 
-    public static void render(GuiGraphics graphics, DeltaTracker delta) {
+    @Override public void render(ForgeGui gui, GuiGraphics graphics, float partialTick, int screenWidth, int screenHeight) {
         Minecraft mc = Minecraft.getInstance();
         Player player = mc.player;
         if (player == null || mc.level == null || mc.options.hideGui || player.isSpectator()) return;
@@ -76,8 +79,7 @@ public final class MagazineHud {
         List<ItemStack> ammo = ammo(tool.getPersistentData().getList(RepeatingCrossbowItem.MAGAZINE, Tag.TAG_COMPOUND));
         int loaded = ammo.size();
         int slots = Math.min(Math.max(RepeatingCrossbowItem.capacity(tool), loaded), MAX_SLOTS);
-        double progress = RepeatingCrossbowItem.reloadProgress(tool, player,
-            mc.level.getGameTime() + delta.getGameTimeDeltaPartialTick(true));
+        double progress = RepeatingCrossbowItem.reloadProgress(tool, player, mc.level.getGameTime() + partialTick);
         // Picking up a crossbow does not show it; a shot or a loaded arrow does.
         int selected = player.getInventory().selected;
         if (selected != watchedSlot) {
@@ -108,11 +110,11 @@ public final class MagazineHud {
             graphics.pose().pushPose();
             graphics.pose().translate(x, top + (slots - 1 - i) * step, 0);
             if (i < loaded) {
-                drawBolt(graphics, ammo.get(i), 0, 0, alpha);
+                drawBolt(graphics, ammo.get(i), alpha);
             } else {
-                graphics.blitSprite(starved ? UNAVAILABLE : SLOT, 0, 0, WIDTH, HEIGHT);
+                blit(graphics, starved ? UNAVAILABLE : SLOT, 0, 0, WIDTH, HEIGHT);
                 if (i == loaded && progress > 0) {
-                    graphics.blitSprite(PROGRESS, WIDTH, HEIGHT, 0, 0, 0, 0, 1 + (int) Math.round(progress * BOLT_LENGTH), HEIGHT);
+                    blit(graphics, PROGRESS, 0, 0, 1 + (int) Math.round(progress * BOLT_LENGTH), HEIGHT);
                 }
             }
             graphics.pose().popPose();
@@ -121,27 +123,28 @@ public final class MagazineHud {
         RenderSystem.disableBlend();
     }
 
-    private static void drawBolt(GuiGraphics graphics, ItemStack ammo, int x, int y, float alpha) {
-        graphics.blitSprite(ammo.is(Items.SPECTRAL_ARROW) ? SPECTRAL : BOLT, x, y, WIDTH, HEIGHT);
-        PotionContents potion = ammo.get(DataComponents.POTION_CONTENTS);
-        if (potion != null && potion.hasEffects()) {
-            int color = potion.getColor();
+    /** Draws {@code width} pixels of a 12x5 sprite at the current pose origin. */
+    private static void blit(GuiGraphics graphics, ResourceLocation texture, int x, int y, int width, int height) {
+        graphics.blit(texture, x, y, 0, 0f, 0f, width, height, WIDTH, HEIGHT);
+    }
+
+    private static void drawBolt(GuiGraphics graphics, ItemStack ammo, float alpha) {
+        blit(graphics, ammo.is(Items.SPECTRAL_ARROW) ? SPECTRAL : BOLT, 0, 0, WIDTH, HEIGHT);
+        if (!PotionUtils.getMobEffects(ammo).isEmpty()) {
+            int color = PotionUtils.getColor(ammo);
             graphics.setColor((color >> 16 & 0xFF) / 255f, (color >> 8 & 0xFF) / 255f, (color & 0xFF) / 255f, alpha);
-            graphics.blitSprite(FLETCHING, x, y, WIDTH, HEIGHT);
+            blit(graphics, FLETCHING, 0, 0, WIDTH, HEIGHT);
             graphics.setColor(1, 1, 1, alpha);
         }
     }
 
     private static List<ItemStack> ammo(ListTag magazine) {
         if (!magazine.equals(cachedMagazine)) {
-            var registries = Minecraft.getInstance().level.registryAccess();
             List<ItemStack> parsed = new ArrayList<>(magazine.size());
-            for (int i = 0; i < magazine.size(); i++) parsed.add(ItemStack.parseOptional(registries, magazine.getCompound(i)));
+            for (int i = 0; i < magazine.size(); i++) parsed.add(ItemStack.of(magazine.getCompound(i)));
             cachedMagazine = magazine.copy();
             cachedAmmo = parsed;
         }
         return cachedAmmo;
     }
-
-    private MagazineHud() {}
 }

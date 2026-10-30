@@ -1,8 +1,0 @@
-{
-  "type": "tconstruct:item_part_builder",
-  "pattern": "tinkers_crossbow:receiver_body",
-  "pattern_item": {
-    "tag": "tconstruct:casts/sand"
-  },
-  "result": "tinkers_crossbow:receiver_body_sand_cast"
-}

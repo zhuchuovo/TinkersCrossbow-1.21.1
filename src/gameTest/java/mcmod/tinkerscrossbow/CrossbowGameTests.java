@@ -4,53 +4,63 @@ import com.mojang.authlib.GameProfile;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.projectile.AbstractArrow;
 import net.minecraft.world.entity.projectile.Arrow;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
-import net.minecraft.world.item.alchemy.PotionContents;
 import net.minecraft.world.level.GameType;
-import net.neoforged.neoforge.common.util.FakePlayer;
-import net.neoforged.neoforge.common.util.FakePlayerFactory;
-import net.neoforged.neoforge.gametest.GameTestHolder;
-import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
-import slimeknights.tconstruct.library.materials.definition.MaterialVariant;
-import slimeknights.tconstruct.library.materials.definition.MaterialVariantId;
-import slimeknights.tconstruct.library.materials.MaterialRegistry;
-import slimeknights.tconstruct.library.modifiers.ModifierEntry;
-import slimeknights.tconstruct.library.modifiers.ModifierId;
-import slimeknights.tconstruct.library.tools.nbt.ModifierNBT;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraftforge.common.util.FakePlayer;
+import net.minecraftforge.common.util.FakePlayerFactory;
+import net.minecraftforge.gametest.GameTestHolder;
+import net.minecraftforge.gametest.PrefixGameTestTemplate;
+import slimeknights.tconstruct.library.materials.MaterialRegistry;
+import slimeknights.tconstruct.library.materials.definition.MaterialVariant;
+import slimeknights.tconstruct.library.materials.definition.MaterialVariantId;
+import slimeknights.tconstruct.library.modifiers.ModifierEntry;
+import slimeknights.tconstruct.library.modifiers.ModifierId;
 import slimeknights.tconstruct.library.recipe.material.MaterialRecipe;
-import slimeknights.tconstruct.library.recipe.tinkerstation.ITinkerStationContainer;
 import slimeknights.tconstruct.library.recipe.tinkerstation.IMutableTinkerStationContainer;
+import slimeknights.tconstruct.library.tools.SlotType;
+import slimeknights.tconstruct.library.tools.helper.ModifierUtil;
 import slimeknights.tconstruct.library.tools.helper.ToolBuildHandler;
 import slimeknights.tconstruct.library.tools.nbt.MaterialNBT;
+import slimeknights.tconstruct.library.tools.nbt.ModifierNBT;
 import slimeknights.tconstruct.library.tools.nbt.ToolStack;
+import slimeknights.tconstruct.library.tools.stat.FloatToolStat;
 import slimeknights.tconstruct.library.tools.stat.ToolStats;
-import slimeknights.tconstruct.library.tools.SlotType;
+import slimeknights.tconstruct.tools.TinkerToolParts;
+import slimeknights.tconstruct.tools.TinkerTools;
+import mcmod.tinkerscrossbow.item.ReceiverItem;
 import mcmod.tinkerscrossbow.item.RepeatingCrossbowItem;
 import mcmod.tinkerscrossbow.logic.CrossbowEvents;
 import mcmod.tinkerscrossbow.logic.ShotTiming;
-import mcmod.tinkerscrossbow.item.ReceiverItem;
 import mcmod.tinkerscrossbow.modifier.CriticalStrikeModifier;
 import mcmod.tinkerscrossbow.modifier.CruelModifier;
 import mcmod.tinkerscrossbow.modifier.PureModifier;
 import mcmod.tinkerscrossbow.modifier.StoneboundModifier;
-import mcmod.tinkerscrossbow.stats.ReceiverBodyStats;
-import mcmod.tinkerscrossbow.stats.ReceiverMagazineStats;
-import mcmod.tinkerscrossbow.stats.CrossbowStats;
 import mcmod.tinkerscrossbow.recipe.ReceiverAssemblyRecipe;
 import mcmod.tinkerscrossbow.recipe.RepeatingCrossbowRecipe;
-import slimeknights.tconstruct.tools.TinkerToolParts;
+import mcmod.tinkerscrossbow.stats.CrossbowStats;
+import mcmod.tinkerscrossbow.stats.ReceiverBodyStats;
+import mcmod.tinkerscrossbow.stats.ReceiverMagazineStats;
 
 /** Development-only source set; these classes and test structures are not shipped in the mod JAR. */
 @GameTestHolder(TinkersCrossbow.MOD_ID)
@@ -86,8 +96,8 @@ public final class CrossbowGameTests {
         close(helper, ShotTiming.interval(0.5, 1), 0.5, "fire rate 1");
         close(helper, ShotTiming.interval(0.5, 2), 0.25, "fire rate 2");
         close(helper, ShotTiming.interval(1, 2), 0.5, "reload speed 2");
-        var contributions = new java.util.ArrayList<net.minecraft.network.chat.Component>();
-        RepeatingCrossbowItem.addMaterialInformation(tool, contributions, net.minecraft.world.item.TooltipFlag.NORMAL);
+        var contributions = new java.util.ArrayList<Component>();
+        RepeatingCrossbowItem.addMaterialInformation(tool, contributions, TooltipFlag.NORMAL);
         helper.assertTrue(contributions.stream().filter(line -> line.getString().contains("60")).count() == 2,
             "Ctrl must show both limb and grip base durability");
         for (String name : TinkersCrossbow.RECEIVER_MATERIALS) {
@@ -102,8 +112,7 @@ public final class CrossbowGameTests {
         helper.succeed();
     }
 
-    private static void stat(GameTestHelper helper, ToolStack tool, slimeknights.tconstruct.library.tools.stat.FloatToolStat stat,
-        double expected, String name) {
+    private static void stat(GameTestHelper helper, ToolStack tool, FloatToolStat stat, double expected, String name) {
         close(helper, tool.getStats().get(stat), expected, name);
     }
     /** Receiver stats before traits: cobalt's lightweight, for one, also raises draw speed and velocity. */
@@ -180,14 +189,12 @@ public final class CrossbowGameTests {
     public static void part_builder_and_casting_recipes(GameTestHelper helper) {
         var manager = helper.getLevel().getRecipeManager();
         var access = helper.getLevel().registryAccess();
-        var goldCasts = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM,
-            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("tconstruct", "casts/gold"));
-        var sandCasts = net.minecraft.tags.TagKey.create(net.minecraft.core.registries.Registries.ITEM,
-            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("tconstruct", "casts/sand"));
+        var goldCasts = TagKey.create(Registries.ITEM, new ResourceLocation("tconstruct", "casts/gold"));
+        var sandCasts = TagKey.create(Registries.ITEM, new ResourceLocation("tconstruct", "casts/sand"));
         for (var part : List.of(TinkersCrossbow.RECEIVER_BODY, TinkersCrossbow.RECEIVER_MAGAZINE)) {
             String name = part.getId().getPath();
             var builder = manager.byKey(TinkersCrossbow.id("parts/builder/" + name));
-            helper.assertTrue(builder.isPresent() && builder.get().value() instanceof slimeknights.tconstruct.library.recipe.partbuilder.PartRecipe recipe
+            helper.assertTrue(builder.isPresent() && builder.get() instanceof slimeknights.tconstruct.library.recipe.partbuilder.PartRecipe recipe
                 && recipe.getCost() == 8 && recipe.getResultItem(access).is(part.get()), "part builder recipe for " + name);
             for (String recipe : List.of("parts/casting/" + name + "_gold_cast", "parts/casting/" + name + "_sand_cast",
                 "parts/casting/" + name + "_composite", "casts/gold/" + name, "casts/sand/molding/" + name,
@@ -217,8 +224,8 @@ public final class CrossbowGameTests {
         helper.assertTrue(!assembly.matches(Inputs.of(3, body, magazine, body.copy()), level), "extra parts make nothing");
         ItemStack receiver = assembly.getValidatedResult(Inputs.of(3, body, magazine), access).getResult().getStack();
         helper.assertTrue(receiver.is(TinkersCrossbow.RECEIVER.get()), "the result is a receiver");
-        helper.assertTrue(mcmod.tinkerscrossbow.item.ReceiverItem.material(receiver, 0).equals(id("cobalt"))
-            && mcmod.tinkerscrossbow.item.ReceiverItem.material(receiver, 1).equals(id("copper")), "the receiver keeps both materials");
+        helper.assertTrue(ReceiverItem.material(receiver, 0).equals(id("cobalt"))
+            && ReceiverItem.material(receiver, 1).equals(id("copper")), "the receiver keeps both materials");
         Inputs consumed = Inputs.of(3, body.copy(), magazine.copy());
         assembly.updateInputs(null, consumed, true);
         helper.assertTrue(consumed.isEmpty(), "assembly consumes the body and the magazine");
@@ -319,13 +326,12 @@ public final class CrossbowGameTests {
         player.setItemInHand(InteractionHand.MAIN_HAND, crossbow);
         ToolStack tool = ToolStack.from(crossbow);
         helper.assertTrue(tool.getModifierLevel(TinkersCrossbow.PURE.getId()) == 1, "an amethyst bronze body gives pure I");
-        var magazine = new net.minecraft.nbt.ListTag();
+        var magazine = new ListTag();
         for (int i = 0; i < 2; i++) {
-            magazine.add(new ItemStack(Items.ARROW).save(helper.getLevel().registryAccess()));
+            magazine.add(new ItemStack(Items.ARROW).save(new CompoundTag()));
             CriticalStrikeModifier.charge(tool);
         }
         tool.getPersistentData().put(RepeatingCrossbowItem.MAGAZINE, magazine);
-        RepeatingCrossbowItem.sync(crossbow);
         float panel = RepeatingCrossbowItem.panelDamage(tool, player);
         TinkersCrossbow.REPEATING_CROSSBOW.get().use(helper.getLevel(), player, InteractionHand.MAIN_HAND);
         var arrows = helper.getLevel().getEntitiesOfClass(AbstractArrow.class, player.getBoundingBox().inflate(4));
@@ -341,7 +347,7 @@ public final class CrossbowGameTests {
         helper.assertTrue(extra.pickup == AbstractArrow.Pickup.CREATIVE_ONLY, "extra arrows cannot be picked up");
         // The pair flies one above the other, 2 x SPREAD apart, plus at most the random spread of each arrow.
         double apart = Math.toDegrees(Math.acos(Math.min(1, main.getDeltaMovement().normalize().dot(extra.getDeltaMovement().normalize()))));
-        double noise = Math.toDegrees(2 * Math.sqrt(3) * 0.0172275 * slimeknights.tconstruct.library.tools.helper.ModifierUtil.getInaccuracy(tool, player));
+        double noise = Math.toDegrees(2 * Math.sqrt(3) * 0.0172275 * ModifierUtil.getInaccuracy(tool, player));
         helper.assertTrue(Math.abs(apart - 2 * PureModifier.SPREAD) <= noise + 0.01, "the pair must be " + 2 * PureModifier.SPREAD + " degrees apart, got " + apart + " (noise " + noise + ")");
         ToolStack after = ToolStack.from(crossbow);
         helper.assertTrue(RepeatingCrossbowItem.loaded(after) == 1, "the extra arrow costs no ammo");
@@ -423,7 +429,7 @@ public final class CrossbowGameTests {
         hit.run();
         hit.run();
         pursuit.onProjectileHitsBlock(ModifierNBT.EMPTY, null, entry, EntityType.ARROW.create(helper.getLevel()),
-            BlockHitResult.miss(Vec3.ZERO, net.minecraft.core.Direction.UP, BlockPos.ZERO), player);
+            BlockHitResult.miss(Vec3.ZERO, Direction.UP, BlockPos.ZERO), player);
         hit.run();
         helper.assertTrue(loaded.getAsInt() == 2, "hitting a block ends the streak");
         for (int i = 0; i < 3; i++) {
@@ -485,7 +491,7 @@ public final class CrossbowGameTests {
         player.getInventory().selected = 0;
         player.setItemInHand(InteractionHand.MAIN_HAND, crossbow);
         // A Tinkers arrow with power I: 3 damage, 1 above a vanilla arrow.
-        ToolStack arrowTool = ToolStack.from(ToolBuildHandler.buildItemFromMaterials(slimeknights.tconstruct.tools.TinkerTools.arrow.get(),
+        ToolStack arrowTool = ToolStack.from(ToolBuildHandler.buildItemFromMaterials(TinkerTools.arrow.get(),
             MaterialNBT.of(MaterialVariant.of(id("flint")), MaterialVariant.of(id("wood")), MaterialVariant.of(id("feather")))));
         float plainDamage = arrowTool.getStats().get(ToolStats.PROJECTILE_DAMAGE);
         arrowTool.addModifier(new ModifierId("tconstruct", "power"), 1);
@@ -516,7 +522,7 @@ public final class CrossbowGameTests {
     @GameTest(template = "empty", timeoutTicks = 20)
     public static void expansion_upgrade(GameTestHelper helper) {
         var manager = helper.getLevel().getRecipeManager();
-        helper.assertTrue(manager.byKey(TinkersCrossbow.id("modifiers/expansion")).filter(recipe -> recipe.value()
+        helper.assertTrue(manager.byKey(TinkersCrossbow.id("modifiers/expansion")).filter(recipe -> recipe
             instanceof slimeknights.tconstruct.library.recipe.modifiers.adding.ModifierRecipe).isPresent(), "expansion recipe");
         helper.assertTrue(manager.byKey(TinkersCrossbow.id("modifiers/salvage/expansion")).isPresent(), "expansion salvage");
         ToolStack tool = ToolStack.from(stoneCrossbow());
@@ -565,7 +571,7 @@ public final class CrossbowGameTests {
         inventory.selected = 0;
         player.setItemInHand(InteractionHand.MAIN_HAND, crossbow);
         ItemStack arrows = new ItemStack(Items.TIPPED_ARROW, 5);
-        arrows.set(DataComponents.POTION_CONTENTS, new PotionContents(Potions.POISON));
+        PotionUtils.setPotion(arrows, Potions.POISON);
         inventory.setItem(1, arrows);
         var item = TinkersCrossbow.REPEATING_CROSSBOW.get();
         RepeatingCrossbowItem.startReload(player);
@@ -581,9 +587,9 @@ public final class CrossbowGameTests {
             if (tick == 20) {
                 helper.assertTrue(RepeatingCrossbowItem.loaded(tool) == 1, "exactly one arrow at 20 ticks");
                 helper.assertTrue(arrows.getCount() == 4, "consume only completed arrow");
-                var saved = tool.getPersistentData().getList(RepeatingCrossbowItem.MAGAZINE, net.minecraft.nbt.Tag.TAG_COMPOUND).getCompound(0);
-                ItemStack restored = ItemStack.parseOptional(helper.getLevel().registryAccess(), saved);
-                helper.assertTrue(ItemStack.isSameItemSameComponents(restored, arrows), "stored arrow must preserve its potion components");
+                var saved = tool.getPersistentData().getList(RepeatingCrossbowItem.MAGAZINE, Tag.TAG_COMPOUND).getCompound(0);
+                ItemStack restored = ItemStack.of(saved);
+                helper.assertTrue(ItemStack.isSameItemSameTags(restored, arrows), "stored arrow must preserve its potion data");
             }
             if (tick == 40) helper.assertTrue(RepeatingCrossbowItem.loaded(tool) == 2, "second arrow at 40 ticks");
             if (tick == 60) {

@@ -6,7 +6,7 @@ import java.util.function.Predicate;
 import javax.annotation.Nullable;
 import net.minecraft.ChatFormatting;
 import net.minecraft.advancements.CriteriaTriggers;
-import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.DoubleTag;
 import net.minecraft.nbt.ListTag;
@@ -29,20 +29,20 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.UseAnim;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
-import slimeknights.mantle.client.TooltipKey;
 import slimeknights.mantle.client.SafeClientAccess;
+import slimeknights.mantle.client.TooltipKey;
 import slimeknights.tconstruct.library.client.materials.MaterialTooltipCache;
 import slimeknights.tconstruct.library.materials.MaterialRegistry;
-import slimeknights.tconstruct.library.tools.SlotType;
 import slimeknights.tconstruct.library.modifiers.ModifierEntry;
 import slimeknights.tconstruct.library.modifiers.ModifierHooks;
 import slimeknights.tconstruct.library.modifiers.hook.build.ConditionalStatModifierHook;
 import slimeknights.tconstruct.library.modifiers.hook.ranged.BowAmmoModifierHook;
+import slimeknights.tconstruct.library.tools.SlotType;
 import slimeknights.tconstruct.library.tools.capability.EntityModifierCapability;
 import slimeknights.tconstruct.library.tools.capability.PersistentDataCapability;
 import slimeknights.tconstruct.library.tools.definition.ToolDefinition;
@@ -54,9 +54,9 @@ import slimeknights.tconstruct.library.tools.item.ranged.ModifiableCrossbowItem;
 import slimeknights.tconstruct.library.tools.nbt.IToolStackView;
 import slimeknights.tconstruct.library.tools.nbt.ModDataNBT;
 import slimeknights.tconstruct.library.tools.nbt.ToolStack;
+import slimeknights.tconstruct.library.tools.stat.FloatToolStat;
 import slimeknights.tconstruct.library.tools.stat.ToolStats;
 import slimeknights.tconstruct.tools.stats.GripMaterialStats;
-import slimeknights.tconstruct.library.utils.ItemStackUtil;
 import mcmod.tinkerscrossbow.TinkersCrossbow;
 import mcmod.tinkerscrossbow.logic.ShotTiming;
 import mcmod.tinkerscrossbow.modifier.CriticalStrikeModifier;
@@ -80,12 +80,11 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
     @Override public Predicate<ItemStack> getAllSupportedProjectiles() { return ARROW_ONLY; }
     @Override public UseAnim getUseAnimation(ItemStack stack) { return UseAnim.NONE; }
     @Override public boolean useOnRelease(ItemStack stack) { return false; }
-    @Override public boolean canAttackBlock(net.minecraft.world.level.block.state.BlockState state, Level level,
-        net.minecraft.core.BlockPos pos, Player player) { return false; }
+    @Override public boolean canAttackBlock(BlockState state, Level level, BlockPos pos, Player player) { return false; }
 
     public static int loaded(IToolStackView tool) { return tool.getPersistentData().getList(MAGAZINE, Tag.TAG_COMPOUND).size(); }
     public static int capacity(IToolStackView tool) { return Math.max(1, Math.min(256, Math.round(tool.getStats().get(CrossbowStats.MAGAZINE_SIZE)))); }
-    private static float modified(IToolStackView tool, LivingEntity entity, slimeknights.tconstruct.library.tools.stat.FloatToolStat stat) {
+    private static float modified(IToolStackView tool, LivingEntity entity, FloatToolStat stat) {
         return entity == null ? tool.getStats().get(stat) : ConditionalStatModifierHook.getModifiedStat(tool, entity, stat);
     }
     private static double decimal(float value) {
@@ -130,7 +129,7 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
                 ConditionalStatModifierHook.getModifiedStat(arrow, shooter, ToolStats.VELOCITY));
         }
         ArrowItem item = ammo.getItem() instanceof ArrowItem arrowItem ? arrowItem : (ArrowItem) Items.ARROW;
-        double damage = item.createArrow(shooter.level(), ammo.copyWithCount(1), shooter, weapon).getBaseDamage();
+        double damage = item.createArrow(shooter.level(), ammo.copyWithCount(1), shooter).getBaseDamage();
         return new ArrowBonus((float) Math.max(0, damage - 2), 1);
     }
     /** Damage of a shot before 致命一击: (crossbow damage + arrow bonus) x crossbow velocity x arrow velocity. */
@@ -152,10 +151,6 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
     }
     public static double getDouble(IToolStackView tool, ResourceLocation key) {
         return tool.getPersistentData().get(key, CompoundTag::getDouble);
-    }
-    public static void sync(ItemStack stack) {
-        CompoundTag tag = ItemStackUtil.getTag(stack);
-        if (tag != null) stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
     }
     public static void publishAmmo(IToolStackView tool) {
         ModDataNBT data = tool.getPersistentData();
@@ -205,15 +200,13 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
         data.putBoolean(RELOADING, true);
         putDouble(data, RELOAD_STARTED, now);
         putDouble(data, RELOAD_TICK, now);
-        sync(stack);
-        player.level().playSound(null, player.blockPosition(), SoundEvents.CROSSBOW_LOADING_START.value(), SoundSource.PLAYERS, 0.7f, 1);
+        player.level().playSound(null, player.blockPosition(), SoundEvents.CROSSBOW_LOADING_START, SoundSource.PLAYERS, 0.7f, 1);
     }
     /** Ends a reload. Loaded arrows stay in the magazine; the unfinished arrow is not consumed. */
     public static void stopReload(ItemStack stack) {
         ModDataNBT data = ToolStack.from(stack).getPersistentData();
         if (!data.contains(RELOADING)) return;
         clearReload(data);
-        sync(stack);
     }
     /** The reload has not advanced for over a tick: the crossbow stopped ticking in the main hand (left the inventory). */
     private static boolean stale(IToolStackView tool, double now) {
@@ -245,7 +238,6 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
         var materials = tool.getMaterials();
         if (materials.size() != RepeatingPartsModule.MAGAZINE) return;
         tool.replaceMaterial(RepeatingPartsModule.MAGAZINE, materials.get(RepeatingPartsModule.BODY));
-        sync(stack);
     }
     private static void tickReload(ItemStack stack, Player player) {
         ToolStack tool = ToolStack.from(stack);
@@ -270,10 +262,9 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
         // Keep the fractional remainder so the next arrow starts on schedule.
         if (loaded(tool) >= capacity(tool)) clearReload(data);
         else putDouble(data, RELOAD_STARTED, started + period);
-        sync(stack);
-        level.playSound(null, player.blockPosition(), SoundEvents.CROSSBOW_LOADING_END.value(), SoundSource.PLAYERS, 0.65f, 1.1f);
+        level.playSound(null, player.blockPosition(), SoundEvents.CROSSBOW_LOADING_END, SoundSource.PLAYERS, 0.65f, 1.1f);
     }
-    /** Takes an arrow from the inventory into the magazine; false without ammo. The caller syncs the stack. */
+    /** Takes an arrow from the inventory into the magazine; false without ammo. */
     private static boolean loadArrow(ToolStack tool, ItemStack stack, Player player) {
         var projectiles = ((RepeatingCrossbowItem) stack.getItem()).getAllSupportedProjectiles();
         ItemStack ammo = BowAmmoModifierHook.consumeAmmo(tool, stack, player, player, projectiles);
@@ -283,7 +274,7 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
             BowAmmoModifierHook.getDesiredProjectiles(tool) * (PureModifier.AMMO_COST - 1));
         ModDataNBT data = tool.getPersistentData();
         ListTag queue = data.getList(MAGAZINE, Tag.TAG_COMPOUND).copy();
-        CompoundTag entry = (CompoundTag) ammo.save(player.level().registryAccess());
+        CompoundTag entry = ammo.save(new CompoundTag());
         arrowBonus(ammo, player, stack).write(entry);
         queue.add(entry);
         data.put(MAGAZINE, queue);
@@ -300,8 +291,7 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
         int added = 0;
         while (added < count && loaded(tool) < capacity(tool) && loadArrow(tool, stack, player)) added++;
         if (added > 0) {
-            sync(stack);
-            player.level().playSound(null, player.blockPosition(), SoundEvents.CROSSBOW_LOADING_END.value(), SoundSource.PLAYERS, 0.8f, 1.4f);
+            player.level().playSound(null, player.blockPosition(), SoundEvents.CROSSBOW_LOADING_END, SoundSource.PLAYERS, 0.8f, 1.4f);
         }
         return added;
     }
@@ -317,9 +307,9 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
         if (now + 1.0e-6 < previous) return;
         ListTag queue = data.getList(MAGAZINE, Tag.TAG_COMPOUND).copy();
         if (queue.isEmpty()) return;
-        ItemStack ammo = ItemStack.parseOptional(level.registryAccess(), queue.getCompound(0));
+        ItemStack ammo = ItemStack.of(queue.getCompound(0));
         ArrowBonus shot = ArrowBonus.read(queue.getCompound(0));
-        if (ammo.isEmpty()) { queue.remove(0); data.put(MAGAZINE, queue); publishAmmo(tool); sync(stack); return; }
+        if (ammo.isEmpty()) { queue.remove(0); data.put(MAGAZINE, queue); publishAmmo(tool); return; }
         float velocity = Math.max(0.01f, modified(tool, player, ToolStats.VELOCITY));
         float inaccuracy = ModifierUtil.getInaccuracy(tool, player);
         int count = Math.min(ammo.getCount(), 64);
@@ -332,7 +322,7 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
             boolean bonus = i >= count;
             ItemStack singleAmmo = ammo.copyWithCount(1);
             ArrowItem item = singleAmmo.getItem() instanceof ArrowItem arrowItem ? arrowItem : (ArrowItem) Items.ARROW;
-            AbstractArrow arrow = item.createArrow(level, singleAmmo, player, stack);
+            AbstractArrow arrow = item.createArrow(level, singleAmmo, player);
             float damage = shotDamage(tool, player, shot) * (1 + critical);
             // Multishot arrows fan out 10 degrees apart; 纯粹 puts its extra arrows in a tight pattern with the middle one.
             int fan = bonus ? count / 2 : i;
@@ -373,7 +363,6 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
         putDouble(data, NEXT_SHOT, ShotTiming.nextDeadline(previous, now, shotSeconds(tool, player) * 20));
         publishAmmo(tool);
         ToolDamageUtil.damageAnimated(tool, count, player, hand);
-        sync(stack);
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.CROSSBOW_SHOOT, SoundSource.PLAYERS, 1, 1);
         if (critical > 0) {
             level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 1, 0.9f);
@@ -389,7 +378,7 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
         String text = String.format(Locale.ROOT, "%.3f", value);
         return text.replaceAll("0+$", "").replaceAll("\\.$", "");
     }
-    @Override public List<Component> getStatInformation(IToolStackView tool, Player player, List<Component> lines,
+    @Override public List<Component> getStatInformation(IToolStackView tool, @Nullable Player player, List<Component> lines,
         TooltipKey key, TooltipFlag flag) {
         lines.add(statLine("durability", tool.getCurrentDurability() + " / " + tool.getStats().getInt(ToolStats.DURABILITY), ChatFormatting.DARK_GREEN));
         lines.add(statLine("draw_speed", number(modified(tool, player, ToolStats.DRAW_SPEED)), ChatFormatting.DARK_PURPLE));
@@ -436,12 +425,12 @@ public final class RepeatingCrossbowItem extends ModifiableCrossbowItem {
             if (i < parts.size() - 1) lines.add(Component.empty());
         }
     }
-    @Override public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> lines, TooltipFlag flag) {
+    @Override public void appendHoverText(ItemStack stack, @Nullable Level level, List<Component> lines, TooltipFlag flag) {
         if (SafeClientAccess.getTooltipKey() == TooltipKey.CONTROL && getToolDefinition().isDataLoaded()
             && !ToolStack.from(stack).getMaterials().isEmpty()) {
             addMaterialInformation(ToolStack.from(stack), lines, flag);
         } else {
-            super.appendHoverText(stack, context, lines, flag);
+            super.appendHoverText(stack, level, lines, flag);
         }
     }
 }

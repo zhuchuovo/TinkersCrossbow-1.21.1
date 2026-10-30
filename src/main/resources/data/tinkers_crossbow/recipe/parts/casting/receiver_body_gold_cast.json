@@ -1,8 +1,0 @@
-{
-  "type": "tconstruct:table_casting_material",
-  "cast": {
-    "tag": "tinkers_crossbow:casts/multi_use/receiver_body"
-  },
-  "item_cost": 8,
-  "result": "tinkers_crossbow:receiver_body"
-}

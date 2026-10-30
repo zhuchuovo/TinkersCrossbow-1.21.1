@@ -1,6 +1,0 @@
-{
-  "parent": "minecraft:item/generated",
-  "textures": {
-    "layer0": "tinkers_crossbow:item/sand_cast/receiver_magazine"
-  }
-}
